@@ -1,5 +1,5 @@
 import React from 'react';
-import { Truck, MapPin, Phone, MessageSquare, Terminal } from 'lucide-react';
+import { Truck, MapPin, Phone, MessageSquare } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: string;
@@ -9,29 +9,33 @@ interface NavbarProps {
 
 export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: NavbarProps) {
   const menuItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'about', label: 'About Us' },
-    { id: 'vehicles', label: 'Vehicles' },
-    { id: 'services', label: 'Services' },
-    { id: 'gallery', label: 'Gallery' },
-    { id: 'blog', label: 'Blog' },
-    { id: 'finance', label: 'Finance & EMI' },
-    { id: 'contact', label: 'Contact' },
+    { id: 'home', label: 'Home & Welcome' },
+    { id: 'finance', label: 'Loan EMI Calculator' },
+    { id: 'gallery', label: 'Showroom Gallery' },
+    { id: 'branches', label: 'Our Branches (Lalbandi & Others)' },
   ];
 
+  const handleTabClick = (id: string) => {
+    setActiveTab(id);
+    const element = document.getElementById(`section-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-white shadow-md border-b border-gray-100">
+    <header className="sticky top-0 z-40 w-full bg-white shadow-xs border-b border-gray-100">
       {/* Top Banner with Location and Call to Action */}
       <div className="bg-brand-green text-white py-2 px-4 text-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-brand-gold" />
-              <span>Mandev Marg, Kathmandu, Nepal</span>
+              <span>East-West Highway, Lalbandi-1, Sarlahi, Nepal</span>
             </span>
             <span className="hidden md:flex items-center gap-1">
               <Phone className="w-3.5 h-3.5 text-brand-gold" />
-              <span>+977-1-4567890 / 9851123456</span>
+              <span>+977-46-50123 / 9854011122</span>
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -40,10 +44,10 @@ export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: Na
             </span>
             <button
               onClick={onOpenConsultant}
-              className="text-white hover:text-brand-gold flex items-center gap-1 font-medium transition-colors"
+              className="text-white hover:text-brand-gold flex items-center gap-1 font-medium transition-colors cursor-pointer"
             >
-              <MessageSquare className="w-3.5 h-3.5 text-brand-gold" />
-              <span>Talk to Siddhababa AI</span>
+              <MessageSquare className="w-3.5 h-3.5 text-brand-gold animate-pulse" />
+              <span>Ask Siddhababa AI</span>
             </button>
           </div>
         </div>
@@ -52,8 +56,8 @@ export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: Na
       {/* Main Navigation Row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         {/* Brand Representation */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('home')}>
-          <div className="w-10 h-10 bg-brand-green text-white rounded-xl flex items-center justify-center shadow-md">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleTabClick('home')}>
+          <div className="w-10 h-10 bg-brand-green text-white rounded-xl flex items-center justify-center shadow-xs">
             <Truck className="w-6 h-6 text-brand-gold" />
           </div>
           <div>
@@ -73,10 +77,10 @@ export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: Na
               <button
                 key={item.id}
                 id={`nav-${item.id}`}
-                onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-2 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
+                onClick={() => handleTabClick(item.id)}
+                className={`px-3 py-2 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
                   activeTab === item.id
-                    ? 'bg-brand-green text-white shadow-sm'
+                    ? 'bg-brand-green text-white shadow-xs'
                     : 'text-gray-600 hover:text-brand-green hover:bg-gray-50'
                 }`}
               >
@@ -88,27 +92,12 @@ export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: Na
           {/* Spacer */}
           <div className="h-6 w-px bg-gray-200 hidden lg:block"></div>
 
-          {/* Quick Buttons */}
-          <button
-            onClick={() => setActiveTab('admin')}
-            id="nav-admin"
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeTab === 'admin'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-amber-700 bg-amber-50 hover:bg-amber-100'
-            }`}
-            title="Dealer Leads Dashboard"
-          >
-            <Terminal className="w-3.5 h-3.5" />
-            <span className="sm:inline">Dealer Board</span>
-          </button>
-
           <a
-            href="tel:+9779851123456"
-            className="hidden sm:flex items-center gap-2 bg-brand-green hover:bg-brand-green-dark text-white font-bold px-4 py-2 rounded-lg text-xs shadow-md transition-all active:scale-95"
+            href="tel:+9779854011122"
+            className="hidden sm:flex items-center gap-2 bg-brand-green hover:bg-brand-green-dark text-white font-bold px-4 py-2 rounded-lg text-xs shadow-xs transition-all active:scale-95"
           >
             <Phone className="w-3.5 h-3.5 text-brand-gold" />
-            <span>Call Dealership</span>
+            <span>Call Lalbandi Main Hub</span>
           </a>
         </div>
       </div>
@@ -119,7 +108,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenConsultant }: Na
           <button
             key={item.id}
             id={`m-nav-${item.id}`}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => handleTabClick(item.id)}
             className={`inline-block px-3 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer ${
               activeTab === item.id
                 ? 'bg-brand-green text-white shadow-xs'

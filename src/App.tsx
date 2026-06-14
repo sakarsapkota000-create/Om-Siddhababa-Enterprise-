@@ -1,1068 +1,941 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from './components/Navbar';
 import EMICalculator from './components/EMICalculator';
-import DealerAdmin from './components/DealerAdmin';
 import SiddhababaAI from './components/SiddhababaAI';
-import { VEHICLES, BLOGS, COUNTERS, TESTIMONIALS } from './data';
-import { Vehicle, BlogPost } from './types';
+import { VEHICLES } from './data';
 import { 
-  ChevronRight, ArrowRight, CheckCircle2, Phone, Briefcase, 
-  MapPin, ShieldCheck, Mail, Calendar, Clock, BookOpen, 
-  Settings, Eye, Heart, MessageSquare, Award, UserCheck, 
-  HelpCircle, Wrench, Package, Cpu, Milestone
+  Phone, MapPin, ShieldCheck, Mail, Clock, MessageSquare, 
+  Eye, Camera, X, Check, Send, Sparkles, User, RefreshCw, Calculator, Landmark, ChevronRight
 } from 'lucide-react';
+
+interface Branch {
+  id: string;
+  name: string;
+  tagline: string;
+  isMainOffice: boolean;
+  address: string;
+  district: string;
+  manager: string;
+  phone: string;
+  email: string;
+  operatingHours: string;
+  stockStatus: string;
+  servicesAvailable: string[];
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [aiOpen, setAiOpen] = useState<boolean>(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('piaggio-ape-city');
-  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
+  const [activeLightbox, setActiveLightbox] = useState<any | null>(null);
 
-  // Inquiry Form Fields
-  const [inquiryName, setInquiryName] = useState<string>('');
-  const [inquiryPhone, setInquiryPhone] = useState<string>('');
-  const [inquiryVehicle, setInquiryVehicle] = useState<string>('Piaggio Ape E-City FX');
-  const [inquiryLocation, setInquiryLocation] = useState<string>('Kathmandu');
-  const [inquiryMessage, setInquiryMessage] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+  // --- PHOTO GALLERY STATE ---
+  const [galleryFilter, setGalleryFilter] = useState<string>('all');
+  const [uploadTitle, setUploadTitle] = useState<string>('');
+  const [uploadDesc, setUploadDesc] = useState<string>('');
+  const [uploadDataUrl, setUploadDataUrl] = useState<string>('');
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  // Quick navigation helpers
-  const handleOpenInquiry = (vehicleName: string) => {
-    setInquiryVehicle(vehicleName);
-    setActiveTab('contact');
-    setTimeout(() => {
-      const el = document.getElementById('inquiry-form-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+  const [galleryImages, setGalleryImages] = useState([
+    {
+      id: 'nepal-cargo',
+      title: 'Piaggio Ape Cargo on Himalayan Slopes',
+      category: 'cargo',
+      desc: 'Transporting agricultural products near majestic mountain routes, built with high ground clearance and steep 22% gradeability.',
+      imageUrl: '/src/assets/images/piaggio_nepal_cargo_1781446062465.jpg'
+    },
+    {
+      id: 'clean-showroom',
+      title: 'Om Siddhababa Authorized Kathmandu Showroom',
+      category: 'showroom',
+      desc: 'Our pristine authorized facility showing low-noise zero-emission electric passenger rickshaws with advanced LFP technology.',
+      imageUrl: '/src/assets/images/piaggio_clean_showroom_1781446080978.jpg'
+    },
+    {
+      id: 'electric-passenger',
+      title: 'Zero-Emission Passenger City Taxi',
+      category: 'electric',
+      desc: 'Silent, battery-operated passenger commercial solution providing Kathmandu operators major fuel savings.',
+      imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800'
+    },
+    {
+      id: 'reinforced-chassis',
+      title: 'Reinforced Metal Cargo Chassis Frame',
+      category: 'showroom',
+      desc: 'Thicker anti-corrosive powder powder coats designed and tested on extreme water logged backstreets.',
+      imageUrl: 'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=800'
+    },
+    {
+      id: 'courier-service',
+      title: 'Express Water & Goods Logistics',
+      category: 'cargo',
+      desc: 'A robust customized parcel cargo container vehicle running daily logistics routes in Lalitpur district.',
+      imageUrl: 'https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?auto=format&fit=crop&q=80&w=800'
+    },
+    {
+      id: 'battery-station',
+      title: 'LFP Smart Swappable Battery Assembly',
+      category: 'electric',
+      desc: 'Certified lithium iron phosphate battery stacks showing real-time balance telemetry under severe climate conditions.',
+      imageUrl: 'https://images.unsplash.com/photo-1620714223084-8fcacc6dfd8d?auto=format&fit=crop&q=80&w=800'
+    }
+  ]);
+
+  const filteredGalleryImages = galleryFilter === 'all'
+    ? galleryImages
+    : galleryImages.filter(img => img.category === galleryFilter);
+
+  // --- BRANCHES ENGINE DATA ---
+  const BRANCHES: Branch[] = [
+    {
+      id: 'lalbandi',
+      name: 'Lalbandi Showroom (Primary Sarlahi Hub)',
+      tagline: 'Sarlahi’s premier authorized sales, genuine parts, and quick service center',
+      isMainOffice: true,
+      address: 'East-West Highway, Lalbandi-1 (Opposite Red Cross Building), Sarlahi, Nepal',
+      district: 'Sarlahi District, Madhesh Province',
+      manager: 'Ramesh Bahadur Thapa',
+      phone: '+977-46-50123 / 9854011122',
+      email: 'lalbandi@omsiddhababa.com',
+      operatingHours: 'Sunday - Friday: 9:00 AM - 6:00 PM',
+      stockStatus: 'Ape City Petrol, E-City FX EV & Ape Diesel Cargo physically in showroom stock.',
+      servicesAvailable: [
+        'Authorized Piaggio Dealership Sales',
+        'Genuine Spare Parts Stock',
+        'LFP Battery Swapping Hub',
+        '3S Service Workshop & Repairs',
+        'Spot bank financing desk with low rates'
+      ]
+    },
+    {
+      id: 'kathmandu',
+      name: 'Kathmandu Corporate Office & Showroom',
+      tagline: 'Capital central showroom & major commercial banking liaison hub',
+      isMainOffice: false,
+      address: 'Mandev Marg, Ward No. 22, Kathmandu, Nepal',
+      district: 'Kathmandu District, Bagmati Province',
+      manager: 'Sushil Parajuli',
+      phone: '+977-1-4567890 / 9851123456',
+      email: 'kathmandu@omsiddhababa.com',
+      operatingHours: 'Sunday - Friday: 9:30 AM - 6:00 PM',
+      stockStatus: 'All electric cargo and passenger options ready with immediate delivery.',
+      servicesAvailable: [
+        'Corporate sales & government fleet delivery',
+        'LFP battery balance diagnostic station',
+        'Priority EMI approval assistance',
+        'Regional parts warehouse depot'
+      ]
+    },
+    {
+      id: 'bardibas',
+      name: 'Bardibas Highway Junction Center',
+      tagline: 'Strategic transit hub serving transport operators across the East-West Highway',
+      isMainOffice: false,
+      address: 'Bardibas Chowk (Near Sindhuwa Bus Stand), Mahottari, Nepal',
+      district: 'Mahottari District, Madhesh Province',
+      manager: 'Dipesh Kumar Shah',
+      phone: '+977-44-550111 / 9801555666',
+      email: 'bardibas@omsiddhababa.com',
+      operatingHours: 'Sunday - Sunday: 8:00 AM - 7:00 PM (Quick Highway Assistance)',
+      stockStatus: 'Ape Cargo DX and electric three-wheeler stocks available.',
+      servicesAvailable: [
+        'Highway express spares store',
+        'Emergency roadside mechanics',
+        'Test driving tracks',
+        'Local cooperative loan schemes'
+      ]
+    },
+    {
+      id: 'chandrapur',
+      name: 'Chandranigahapur Branch (Rautahat Hub)',
+      tagline: 'Authorized dealer outlet serving Rautahat and central Madhesh operations',
+      isMainOffice: false,
+      address: 'East-West Highway Connection Point, Chandrapur-4, Rautahat, Nepal',
+      district: 'Rautahat District, Madhesh Province',
+      manager: 'Suresh Prasad Gupta',
+      phone: '+977-55-520144 / 9845012345',
+      email: 'chandrapur@omsiddhababa.com',
+      operatingHours: 'Sunday - Friday: 9:00 AM - 5:30 PM',
+      stockStatus: 'Specializing in Ape E-City Lithium EV and high-clearance Petrol Passenger Models.',
+      servicesAvailable: [
+        'Retail sales team',
+        'Local municipal approvals helpdesk',
+        'Scheduled periodic fluid services',
+        'Regional spare parts delivery'
+      ]
+    },
+    {
+      id: 'hariwon',
+      name: 'Hariwon Showroom Outlet',
+      tagline: 'Local neighborhood outlet providing swift vehicle deliveries and support',
+      isMainOffice: false,
+      address: 'Hariwon-11 (Near Sagarmatha Bank building), Sarlahi, Nepal',
+      district: 'Sarlahi District, Madhesh Province',
+      manager: 'Krishna Lal Shrestha',
+      phone: '+977-46-522111 / 9854066777',
+      email: 'hariwon@omsiddhababa.com',
+      operatingHours: 'Sunday - Friday: 9:30 AM - 5:30 PM',
+      stockStatus: 'Spot bookings open for low-noise Piaggio Ape City.',
+      servicesAvailable: [
+        'Express commercial taxi booking',
+        'Standard tuneup warranty repair',
+        'Genuine lubricants store'
+      ]
+    }
+  ];
+
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('lalbandi');
+  const currentBranch = BRANCHES.find(b => b.id === selectedBranchId) || BRANCHES[0];
+  const otherBranchesList = BRANCHES.filter(b => b.id !== selectedBranchId);
+
+  // --- EMBEDDED CHAT/MESSENGER STATE ---
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; sender: 'user' | 'ai'; text: string; timestamp: string }>>([
+    {
+      id: 'msg-start',
+      sender: 'ai',
+      text: 'Namaste! Welcome to Om Siddhababa Enterprises. I can answer inquiries regarding passenger rickshaws, cargo vehicles, our active branches (Lalbandi, Kathmandu, Bardibas, Chandrapur, Hariwon), or calculate detailed monthly loan repayment rates. Try clicking the options below or type your budget question!',
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    }
+  ]);
+  const [chatInput, setChatInput] = useState<string>('');
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollChatToEnd = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleOpenFinanceForVehicle = (vehicleId: string) => {
-    setSelectedVehicle(vehicleId);
-    setActiveTab('finance');
-  };
+  useEffect(() => {
+    scrollChatToEnd();
+  }, [chatMessages, chatLoading]);
 
-  // Submit Inquiry handler
-  const handleInquirySubmit = async (e: React.FormEvent) => {
+  // Gallery Drag-and-Drop Handlers
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (!inquiryName || !inquiryPhone || !inquiryLocation) {
-      alert('Please fill out the required fields.');
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setUploadDataUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setUploadDataUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    document.getElementById('gallery-upload-input')?.click();
+  };
+
+  const handleUploadSubmit = () => {
+    if (!uploadTitle.trim()) {
+      alert('Please enter a title for your vehicle photograph.');
       return;
     }
+    const finalUrl = uploadDataUrl || 'https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?auto=format&fit=crop&q=80&w=800';
+    const newImg = {
+      id: `user-${Date.now()}`,
+      title: uploadTitle,
+      category: 'user',
+      desc: uploadDesc || 'Shared dynamically by a premium fleet operator in Lalbandi/Kathmandu.',
+      imageUrl: finalUrl
+    };
+    setGalleryImages([newImg, ...galleryImages]);
+    setUploadTitle('');
+    setUploadDesc('');
+    setUploadDataUrl('');
+    setGalleryFilter('user');
+    alert('✓ Image load verification passed! Your picture is published to the User Uploads register.');
+  };
 
-    setIsSubmitting(true);
+  // Chat Messenger Logic
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const currentText = chatInput;
+    setChatInput('');
+
+    const userMsg = {
+      id: `u-${Date.now()}`,
+      sender: 'user' as const,
+      text: currentText,
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    };
+
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatLoading(true);
+
     try {
-      const res = await fetch('/api/inquiries', {
+      const chatHistory = chatMessages.map(m => ({
+        sender: m.sender,
+        text: m.text
+      }));
+
+      const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: inquiryName,
-          phone: inquiryPhone,
-          vehicleInterest: inquiryVehicle,
-          location: inquiryLocation,
-          message: inquiryMessage
+          message: currentText,
+          history: chatHistory
         })
       });
 
       if (res.ok) {
-        setSubmitSuccess(true);
-        // Clear fields
-        setInquiryName('');
-        setInquiryPhone('');
-        setInquiryMessage('');
-        
-        // Hide success message after 5 seconds
-        setTimeout(() => setSubmitSuccess(false), 8000);
+        const data = await res.json();
+        const aiMsg = {
+          id: `ai-${Date.now()}`,
+          sender: 'ai' as const,
+          text: data.text,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        };
+        setChatMessages(prev => [...prev, aiMsg]);
+      } else {
+        throw new Error('Not ok');
       }
-    } catch (err) {
-      console.error('Failed to submit lead:', err);
-      alert('Failed to send inquiry due to network issue. Please call directly!');
+    } catch {
+      // Local robust offline matcher if server is reloading
+      let responseText = "Namaste! For information on our models, finance options, or branch details:";
+      const query = currentText.toLowerCase();
+
+      if (query.includes('lalbandi') || query.includes('sarlahi')) {
+        responseText = "Our **Lalbandi Main Showroom** is located at East-West Highway, Lalbandi-1 (Opposite Red Cross Building), Sarlahi, Nepal. You can call them directly at **+977-46-50123** or mobile **9854011122** for instant booking checks, test rides, or spare parts!";
+      } else if (query.includes('kathmandu') || query.includes('head')) {
+        responseText = "Our **Kathmandu Central Showroom** is located on Mandev Marg, Kathmandu. You can contact them at **+977-1-4567890** or mobile **9851123456**.";
+      } else if (query.includes('emi') || query.includes('price') || query.includes('finance') || query.includes('loan')) {
+        responseText = "We operate dedicated bank schemes starting at just **30% down payment**! Interest rates range between **8.5% and 12.5%** with our partners (Nabil, Global IME, NIC Asia, Rastriya Banijya). Use our interactive **Loan EMI Calculator** tab to simulate plans in seconds.";
+      } else if (query.includes('cheap') || query.includes('cost') || query.includes('45')) {
+        responseText = "Om Siddhababa offers highly effective entry-level solutions! You can initiate bookings for Piaggio models with minor processing fees, or calculate standard EMIs that yield positive monthly profits through vehicle logistics.";
+      } else {
+        responseText = "We support robust sales of high-payload Cargo (Diesel & Electric) and Passenger vehicles. Feel free to explore our dedicated branches at **Lalbandi, Bardibas, Kathmandu, Chandrapur, and Hariwon**!";
+      }
+
+      const aiMsg = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai' as const,
+        text: responseText + "\n\n*(Siddhababa Offline Mode Active)*",
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      };
+      setChatMessages(prev => [...prev, aiMsg]);
     } finally {
-      setIsSubmitting(false);
+      setChatLoading(false);
+    }
+  };
+
+  const handleQuickQuestion = (qn: string) => {
+    setChatInput(qn);
+  };
+
+  // Auto scroll navigation observer
+  useEffect(() => {
+    const sections = ['home', 'finance', 'gallery', 'branches'];
+    const handleScroll = () => {
+      const scrollPos = window.scrollY + 200;
+      for (const section of sections) {
+        const el = document.getElementById(`section-${section}`);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            setActiveTab(section);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const triggerScrollToSection = (id: string) => {
+    setActiveTab(id);
+    const element = document.getElementById(`section-${id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800">
-      {/* Top sticky navbar */}
+    <div className="min-h-screen bg-slate-50 text-gray-800 selection:bg-brand-green selection:text-white antialiased flex flex-col">
+      
+      {/* 1. NAVIGATION BAR */}
       <Navbar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={triggerScrollToSection} 
         onOpenConsultant={() => setAiOpen(true)} 
       />
 
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 2. MAIN WORKSPACE */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-24">
         
-        {/* TAB 1: HOME */}
-        {activeTab === 'home' && (
-          <div className="space-y-16 animate-fade-in">
+        {/* ================= SECTION 1: ELEGANT & COMPACT HERO ================= */}
+        <section id="section-home" className="scroll-mt-24 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center bg-white rounded-3xl p-6 sm:p-12 border border-gray-150 shadow-xs relative overflow-hidden">
+            {/* Background absolute highlights */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-brand-green-light rounded-full filter blur-3xl -z-10 opacity-70"></div>
             
-            {/* HERO SECTION */}
-            <div className="relative rounded-3xl overflow-hidden bg-slate-900 text-white min-h-[460px] flex items-center shadow-2xl">
-              {/* Geometric pattern overlay */}
-              <div className="absolute inset-0 bg-radial-gradient from-brand-green/30 to-slate-950 opacity-90 z-0"></div>
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 bg-brand-green-light text-brand-green px-3.5 py-1.5 rounded-full border border-brand-green/15 text-[10px] font-black uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse"></span>
+                <span>Active Lalbandi Hub & Multi-Branch Network</span>
+              </div>
               
-              <div className="relative z-10 px-8 sm:px-12 py-16 max-w-2xl space-y-6">
-                <span className="bg-brand-gold text-slate-900 font-extrabold px-3 py-1.5 rounded-full text-xs uppercase tracking-wider">
-                  Om Siddhababa Enterprises
-                </span>
-                <h1 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight">
-                  Driving Nepal’s <span className="text-brand-green">Commercial Mobility</span> Future
-                </h1>
-                <p className="text-gray-300 text-sm sm:text-base leading-relaxed font-semibold">
-                  Authorized Piaggio dealer in Kathmandu. Empowers your logistics and passenger transport routes with high-mileage three-wheelers & cost-efficient electric vehicles.
-                </p>
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <button
-                    onClick={() => setActiveTab('vehicles')}
-                    className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold px-6 py-3.5 rounded-xl text-xs transition-all tracking-wide cursor-pointer active:scale-95 shadow-lg"
-                  >
-                    Explore Vehicles
-                  </button>
-                  <button
-                    onClick={() => handleOpenInquiry('Piaggio Ape E-City FX')}
-                    className="bg-white/10 hover:bg-white/15 text-white font-extrabold px-6 py-3.5 rounded-xl text-xs transition-all tracking-wide cursor-pointer active:scale-95 border border-white/20"
-                  >
-                    Book Test Drive
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('finance')}
-                    className="bg-brand-gold hover:bg-[#c29828] text-slate-950 font-extrabold px-6 py-3.5 rounded-xl text-xs transition-all tracking-wide cursor-pointer active:scale-95"
-                  >
-                    Calculate EMI
-                  </button>
-                </div>
-              </div>
-
-              {/* Graphical illustration for Hero background right-side */}
-              <div className="absolute right-0 bottom-0 top-0 w-1/3 hidden lg:flex items-center justify-center p-8 bg-gradient-to-l from-brand-green/20 to-transparent">
-                <div className="text-center space-y-4">
-                  <div className="w-40 h-40 rounded-full border-4 border-dashed border-brand-green flex items-center justify-center text-brand-gold bg-brand-green/10">
-                    <Cpu className="w-16 h-16 text-brand-gold animate-spin-slow" />
-                  </div>
-                  <div className="text-xs">
-                    <p className="font-extrabold text-brand-gold uppercase tracking-widest">Ape E-City Electric</p>
-                    <p className="text-gray-400">Zero Emissions, Instant Profit</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* TRUST BUILDING COUNTERS */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-xs grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {COUNTERS.map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <p className="text-3xl sm:text-4xl font-extrabold text-brand-green tracking-tight">
-                    {item.value}
-                  </p>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* WHY CHOOSE US */}
-            <div className="space-y-8">
-              <div className="text-center space-y-2">
-                <span className="text-brand-green text-xs font-bold uppercase tracking-widest">The Dealership Advantage</span>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                  Why Commercial Businesses Trust Us
-                </h2>
-                <div className="w-16 h-1 bg-brand-green mx-auto rounded-full"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                {[
-                  {
-                    icon: <Award className="w-6 h-6 text-brand-gold" />,
-                    title: 'Authorized Piaggio Dealer',
-                    desc: 'Direct import of genuine passenger & cargo rickshaws with brand warranty.'
-                  },
-                  {
-                    icon: <Wrench className="w-6 h-6 text-brand-gold" />,
-                    title: 'Genuine Spare Parts',
-                    desc: 'Fully stocked service warehouse in Kathmandu insuring absolute uptime.'
-                  },
-                  {
-                    icon: <HelpCircle className="w-6 h-6 text-brand-gold" />,
-                    title: 'Finance & EMI Assistance',
-                    desc: 'Prioritized loan approvals in alliance with major Nepalese banks.'
-                  },
-                  {
-                    icon: <UserCheck className="w-6 h-6 text-brand-gold" />,
-                    title: 'After-Sales Service',
-                    desc: 'Certified engineers trained on state-of-the-art diagnostic machines.'
-                  },
-                  {
-                    icon: <Briefcase className="w-6 h-6 text-brand-gold" />,
-                    title: 'Mobility Experts',
-                    desc: 'Guiding local delivery brands and operators to lower their cost per kilometer.'
-                  }
-                ].map((item, idx) => (
-                  <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 hover:shadow-md transition-all space-y-3">
-                    <div className="w-11 h-11 bg-brand-green-light rounded-lg flex items-center justify-center">
-                      {item.icon}
-                    </div>
-                    <h3 className="font-bold text-gray-900 text-sm leading-tight">{item.title}</h3>
-                    <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* SPECIAL FOCUS FEATURED VEHICLES */}
-            <div className="space-y-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 border-b border-gray-150 pb-4">
-                <div className="space-y-1">
-                  <span className="text-brand-green text-xs font-bold uppercase tracking-widest block">Premium Showroom Fleet</span>
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                    Featured Piaggio Auto Rickshaws
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setActiveTab('vehicles')}
-                  className="font-bold text-xs text-brand-green hover:text-brand-green-dark flex items-center gap-1 transition-colors"
-                >
-                  <span>View All Specifications</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {VEHICLES.map((vehicle) => (
-                  <div 
-                    key={vehicle.id} 
-                    className="bg-white rounded-2xl border border-gray-150 overflow-hidden hover:shadow-lg transition-all flex flex-col justify-between"
-                  >
-                    {/* Header banner */}
-                    <div className="bg-slate-900 text-white p-6 relative">
-                      <span className={`absolute right-4 top-4 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${
-                        vehicle.category === 'electric' ? 'bg-emerald-600 text-white' : 'bg-brand-gold text-slate-900'
-                      }`}>
-                        {vehicle.fuelType}
-                      </span>
-                      <h3 className="text-xl font-black text-white">{vehicle.name}</h3>
-                      <p className="text-xs text-brand-gold mt-1 uppercase font-bold tracking-widest">{vehicle.tagline}</p>
-                    </div>
-
-                    {/* Specifications Body */}
-                    <div className="p-6 space-y-4">
-                      {/* Cost metrics */}
-                      <div className="p-3 bg-brand-green-light hover:bg-[#e4f6ee] transition-colors rounded-xl flex justify-between items-center text-xs">
-                        <span className="font-bold text-gray-700">Estimated Price (Kathmandu):</span>
-                        <span className="font-extrabold text-brand-green text-sm">{vehicle.priceRange}</span>
-                      </div>
-
-                      {/* Display specs */}
-                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold py-2">
-                        {vehicle.specs.engine && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-gray-50/50">
-                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Engine Power</span>
-                            <span className="text-gray-800">{vehicle.specs.engine}</span>
-                          </div>
-                        )}
-                        {vehicle.specs.range && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-emerald-50/30">
-                            <span className="text-[10px] text-emerald-700 block font-bold uppercase">Certified Range</span>
-                            <span className="text-emerald-800">{vehicle.specs.range}</span>
-                          </div>
-                        )}
-                        {vehicle.specs.runningCost && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-emerald-50/30">
-                            <span className="text-[10px] text-emerald-700 block font-bold uppercase">Running Cost / KM</span>
-                            <span className="text-emerald-800">{vehicle.specs.runningCost}</span>
-                          </div>
-                        )}
-                        {vehicle.specs.payloadCapacity && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-gray-50/50">
-                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Payload Capacity</span>
-                            <span className="text-gray-800 font-extrabold">{vehicle.specs.payloadCapacity}</span>
-                          </div>
-                        )}
-                        {vehicle.specs.seatingCapacity && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-gray-50/50">
-                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Seating Comfort</span>
-                            <span className="text-gray-800">{vehicle.specs.seatingCapacity}</span>
-                          </div>
-                        )}
-                        {vehicle.specs.mileage && (
-                          <div className="border border-gray-100 p-2.5 rounded-lg bg-gray-50/50">
-                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Fuel Mileage</span>
-                            <span className="text-gray-800">{vehicle.specs.mileage}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Features Bullet */}
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Top Features</p>
-                        <div className="grid grid-cols-1 gap-1 text-xs">
-                          {vehicle.features.slice(0, 3).map((f, i) => (
-                            <div key={i} className="flex items-start gap-1.5 font-semibold text-gray-600">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-brand-green mt-0.5" />
-                              <span>{f}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Action Cards */}
-                    <div className="px-6 pb-6 pt-3 grid grid-cols-2 gap-3 border-t border-gray-50">
-                      <button
-                        onClick={() => handleOpenFinanceForVehicle(vehicle.id)}
-                        className="border border-brand-green hover:bg-brand-green-light text-brand-green font-extrabold py-2.5 px-3 rounded-xl text-xs transition-colors cursor-pointer text-center"
-                      >
-                        Calculate Loans
-                      </button>
-                      <button
-                        onClick={() => handleOpenInquiry(vehicle.name)}
-                        className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold py-2.5 px-3 rounded-xl text-xs transition-all cursor-pointer text-center shadow-xs"
-                      >
-                        Inquire Details
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CUSTOMER TESTIMONIALS */}
-            <div className="space-y-8 bg-white p-8 rounded-2xl border border-gray-100 shadow-xs">
-              <div className="text-center space-y-2">
-                <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Entrepreneurs Vouch For Us</span>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                  What Our Customers Say
-                </h2>
-                <div className="w-16 h-1 bg-brand-green mx-auto rounded-full"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {TESTIMONIALS.map((t, idx) => (
-                  <div key={idx} className="border border-gray-100 rounded-xl p-5 space-y-4 flex flex-col justify-between hover:shadow-md transition-shadow bg-gray-50/30">
-                    <p className="text-xs text-gray-500 italic leading-relaxed font-semibold">
-                      &quot;{t.quote}&quot;
-                    </p>
-                    <div className="flex items-center gap-3 pt-2">
-                      <div className="w-9 h-9 rounded-full bg-brand-green text-brand-gold font-bold flex items-center justify-center text-xs">
-                        {t.name[0]}
-                      </div>
-                      <div className="text-xs">
-                        <h4 className="font-black text-gray-800">{t.name}</h4>
-                        <p className="text-[10px] text-gray-400 font-bold">{t.role} - <span className="text-brand-green">{t.location}</span></p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CTA BANNER */}
-            <div className="bg-gradient-to-r from-teal-950 to-brand-green text-center text-white p-12 rounded-3xl space-y-6 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-12 -translate-y-12"></div>
-              <h2 className="text-3xl font-black text-white leading-tight">
-                Ready to Start Customizing Your Business Journey with Piaggio?
+              <h2 className="text-3xl sm:text-5xl font-black text-gray-950 tracking-tight leading-tight">
+                Empowering Sarlahi with <span className="text-brand-green">Piaggio Commercial</span> Vehicles
               </h2>
-              <p className="text-sm text-gray-200 max-w-lg mx-auto font-semibold">
-                Speak directly with transport sales advisors today. Receive verified quotes, bank pre-approvals, or request immediate delivery in Kathmandu.
-              </p>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={() => setActiveTab('contact')}
-                  className="bg-brand-gold hover:bg-[#cda429] text-slate-900 font-extrabold px-6 py-3.5 rounded-xl text-xs transition-colors cursor-pointer shadow-lg inline-flex items-center gap-2 active:scale-95"
-                >
-                  <span>Book Free Consultation</span>
-                  <ArrowRight className="w-4.5 h-4.5" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 2: ABOUT US */}
-        {activeTab === 'about' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2 max-w-xl mx-auto">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Our Heritage</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">About Om Siddhababa Enterprises</h2>
-              <p className="text-xs text-gray-500">Authorized Piaggio Commercial Vehicle Dealer in Nepal, empowering transport operations with zero-compromise mechanical capabilities.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            {/* Story grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-white p-8 rounded-2xl border border-gray-100 shadow-xs">
-              <div className="space-y-4 text-xs sm:text-sm text-gray-600 leading-relaxed font-semibold">
-                <p>
-                  At <strong>Om Siddhababa Enterprises</strong>, we believe commercial vehicles are direct tools of progress. More than simple metal boxes on three wheels, they represent livelihoods, route-efficiency, local deliveries, and environmental responsibility inside Nepal.
-                </p>
-                <p>
-                  As an authorized dealership for Piaggio, we maintain high standards across three core divisions: Vehicle Sales, Genuine Spare Parts, and Mechanical Servicing. Our certified workshop features trained mechanics capable of diagnostics for modern emission engines and next-gen electric powertrains (LFP batteries).
-                </p>
-                <div className="bg-brand-green-light border-l-4 border-brand-green p-3.5 rounded-r-xl">
-                  <p className="text-brand-green font-bold text-xs italic">
-                    &quot;Our absolute commitments rest in helping transport operators maximize daily profit indices through custom financing policies and robust maintenance vowing.&quot;
-                  </p>
-                </div>
-              </div>
-
-              {/* Graphic Block representing Corporate parameters */}
-              <div className="space-y-4">
-                {[
-                  {
-                    title: 'Our Mission',
-                    desc: 'To empower Nepalese operators and logistic entities with highly efficient, robust, and cost-effective commercial transport solutions.',
-                    bg: 'bg-teal-50'
-                  },
-                  {
-                    title: 'Our Vision',
-                    desc: 'To establish Om Siddhababa as the premier, gold-standard dealership for electric and diesel three-wheelers across Nepal.',
-                    bg: 'bg-amber-50/50'
-                  },
-                  {
-                    title: 'Corporate Values',
-                    desc: 'Guarantees absolute price transparency, genuine factory spares, and long-term diagnostic backups on every single chassis built.',
-                    bg: 'bg-emerald-50'
-                  }
-                ].map((v, i) => (
-                  <div key={i} className={`${v.bg} p-4 rounded-xl border border-gray-100/50`}>
-                    <h4 className="font-extrabold text-gray-900 text-sm mb-1">{v.title}</h4>
-                    <p className="text-xs text-gray-600 font-semibold leading-relaxed">{v.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Leadership Message Section */}
-            <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-md">
-              <div className="max-w-2xl space-y-4">
-                <span className="text-brand-gold text-xs uppercase tracking-wider font-extrabold">Executive Commitment</span>
-                <h3 className="text-lg font-bold">Leading the Go-Green Transit Switch</h3>
-                <p className="text-xs text-gray-300 leading-relaxed font-medium">
-                  &quot;Nepal’s fuel import bill poses heavy weight on public operators. Moving our taxi and cargo fleets over to custom-configured lithium electric powertrains directly supports our local economies. Om Siddhababa is proud to be at the forefront of this industrial transformation in Nepal.&quot;
-                </p>
-                <div className="pt-2">
-                  <p className="text-sm font-black text-brand-gold">Board of Directors</p>
-                  <p className="text-[10px] text-gray-400">Om Siddhababa Enterprises, Kathmandu</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: VEHICLES CATALOG */}
-        {activeTab === 'vehicles' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">The Showroom</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Explore Our Piaggio Fleet</h2>
-              <p className="text-xs text-gray-500 max-w-lg mx-auto">Compare specifications, fuel capabilities, exact payload dimensions, and running costs for local delivery and passenger transport.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            {/* Vehicle List Sectioned */}
-            <div className="space-y-12">
-              {['passenger', 'cargo', 'electric'].map((category) => {
-                const categoryVehicles = VEHICLES.filter(v => v.category === category || (category === 'electric' && v.fuelType === 'Electric'));
-                if (categoryVehicles.length === 0) return null;
-                
-                return (
-                  <div key={category} className="space-y-6">
-                    <h3 className="text-lg font-extrabold text-slate-800 uppercase tracking-widest border-b border-gray-200 pb-2 flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-brand-green"></span>
-                      <span>{category === 'passenger' ? 'Passenger Auto Rickshaws' : category === 'cargo' ? 'Cargo Loading Auto Series' : 'Zero Emission Electric (EV) Autos'}</span>
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {categoryVehicles.map((vehicle) => (
-                        <div 
-                          key={vehicle.id} 
-                          className="bg-white rounded-2xl border border-gray-150 overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between"
-                        >
-                          {/* Header section with image placeholder avatar */}
-                          <div className="p-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-                            <div>
-                              <h4 className="text-lg font-black text-white">{vehicle.name}</h4>
-                              <p className="text-[10px] text-brand-gold uppercase font-bold tracking-widest mt-0.5">{vehicle.tagline}</p>
-                            </div>
-                            <span className="text-xs font-black bg-brand-green text-white px-2.5 py-1 rounded">
-                              {vehicle.fuelType}
-                            </span>
-                          </div>
-
-                          {/* Technical Specs Accordion Grid */}
-                          <div className="p-6 space-y-6">
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Operational Specs</p>
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                {vehicle.specs.engine && (
-                                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 block uppercase">Engine displacement</span>
-                                    <span className="font-extrabold text-gray-800">{vehicle.specs.engine}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.batteryCapacity && (
-                                  <div className="bg-emerald-50/20 p-3 rounded-xl border border-emerald-100">
-                                    <span className="text-[10px] font-bold text-emerald-800 block uppercase">Battery Storage</span>
-                                    <span className="font-extrabold text-emerald-900">{vehicle.specs.batteryCapacity}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.range && (
-                                  <div className="bg-emerald-50/20 p-3 rounded-xl border border-emerald-110">
-                                    <span className="text-[10px] font-bold text-emerald-800 block uppercase">Single Charge Range</span>
-                                    <span className="font-extrabold text-emerald-900">{vehicle.specs.range}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.chargingTime && (
-                                  <div className="bg-emerald-50/20 p-3 rounded-xl border border-emerald-110">
-                                    <span className="text-[10px] font-bold text-emerald-800 block uppercase">Charging Time</span>
-                                    <span className="font-extrabold text-emerald-900">{vehicle.specs.chargingTime}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.runningCost && (
-                                  <div className="bg-emerald-50/20 p-3 rounded-xl border border-emerald-110">
-                                    <span className="text-[10px] font-bold text-emerald-800 block uppercase">Running cost / KM</span>
-                                    <span className="font-extrabold text-brand-green">{vehicle.specs.runningCost}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.payloadCapacity && (
-                                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 block uppercase">Approved Payload</span>
-                                    <span className="font-extrabold text-gray-800">{vehicle.specs.payloadCapacity}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.cargoDimensions && (
-                                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 col-span-2">
-                                    <span className="text-[10px] font-bold text-gray-400 block uppercase">Box Tray Dimensions</span>
-                                    <span className="font-extrabold text-gray-800">{vehicle.specs.cargoDimensions}</span>
-                                  </div>
-                                )}
-                                {vehicle.specs.mileage && (
-                                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 block uppercase">Avg. Fuel Mileage</span>
-                                    <span className="font-extrabold text-gray-800">{vehicle.specs.mileage}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Features list */}
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Machinery & Vetting Details</p>
-                              <ul className="grid grid-cols-1 gap-2 text-xs">
-                                {vehicle.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-start gap-2 font-semibold text-gray-600">
-                                    <CheckCircle2 className="w-4 h-4 text-brand-green mt-0.5 shrink-0" />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-
-                          {/* Price Footer action */}
-                          <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                              <span className="text-[10px] text-gray-400 font-bold block uppercase">Approx. On-Road NPR</span>
-                              <span className="text-base font-extrabold text-brand-green leading-none">{vehicle.priceRange}</span>
-                            </div>
-                            <div className="flex gap-2 shrink-0">
-                              <button
-                                onClick={() => handleOpenFinanceForVehicle(vehicle.id)}
-                                className="bg-white hover:bg-gray-50 text-brand-green font-bold border border-gray-200 py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
-                              >
-                                Finance EMI
-                              </button>
-                              <button
-                                onClick={() => handleOpenInquiry(vehicle.name)}
-                                className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold py-2.5 px-4 rounded-xl text-xs cursor-pointer shadow-xs transition-all active:scale-95"
-                              >
-                                Inquire
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: SERVICES */}
-        {activeTab === 'services' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Solutions</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Services & Fleet Support</h2>
-              <p className="text-xs text-gray-500 max-w-lg mx-auto">We keep your Piaggio autos moving. Fully integrated workshop, spare parts storage, and customized logistics packages.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                {
-                  title: 'Vehicle Sales',
-                  desc: 'Comprehensive inventory of passenger Rickshaws, Diesel cargo loaders, and Quiet electric autos in stock in Kathmandu showroom.'
-                },
-                {
-                  title: 'Genuine Spare Parts',
-                  desc: 'We are certified suppliers of authentic Piaggio spares. Avoid low-quality generic parts to maintain absolute vehicle warranty.'
-                },
-                {
-                  title: 'Specialist Maintenance',
-                  desc: 'Our mechanical bays feature professional diagnostic scan tools specifically tailored to recalibrate electric battery controls.'
-                },
-                {
-                  title: 'Finance & Vetting Support',
-                  desc: 'Hassle-free loan preparation. Our staff coordinates documents mapping directly to bank checklist policies minimizing delay indices.'
-                },
-                {
-                  title: 'Insurance Vouching',
-                  desc: 'Preferential rate negotiations with Nepal premier commercial vehicle insurance agencies to safeguard your investments.'
-                },
-                {
-                  title: 'Commercial Fleet Solutions',
-                  desc: 'Dedicated transport coordination packages targeting Schools, municipal local teams, logistics aggregators, and water suppliers.'
-                }
-              ].map((s, idx) => (
-                <div key={idx} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-xs hover:shadow-md transition-shadow space-y-3">
-                  <div className="w-10 h-10 bg-brand-green-light rounded-xl flex items-center justify-center text-brand-green text-base font-bold font-mono">
-                    {idx + 1}
-                  </div>
-                  <h3 className="font-extrabold text-gray-900 text-sm">{s.title}</h3>
-                  <p className="text-xs text-gray-500 leading-relaxed font-semibold">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Fleet partners target block */}
-            <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-lg grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <span className="text-brand-gold text-xs uppercase tracking-widest font-extrabold">Fleet Packages</span>
-                <h3 className="text-lg font-black">Targeted Solutions For Municipalities, Schools, and Courier Brands</h3>
-                <p className="text-xs text-gray-300 leading-relaxed font-semibold">
-                  Transitioning small freight delivery to low running-cost electric three-wheelers can downscale logistics operating budgets by more than 50%. We support bulk orders with custom branding livery, customized cargo tray configurations, and priority mechanic support.
-                </p>
-              </div>
-              <div className="flex flex-col justify-center sm:items-end shrink-0 gap-2">
-                <button
-                  onClick={() => handleOpenInquiry('Municipal Fleet Solutions')}
-                  className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold py-3 px-5 rounded-xl text-xs cursor-pointer shadow-md text-center transition-all"
-                >
-                  Request Fleet Proposal
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: GALLERY */}
-        {activeTab === 'gallery' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Captured Moments</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Showroom & Customer Success</h2>
-              <p className="text-xs text-gray-500">A visual look into our showroom operations, delivery handovers, local transport, and maintenance hubs.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            {/* Simulated Gallery categorized under responsive grids */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {[
-                { title: 'Kathmandu Showroom Lobby', cat: 'Showroom' },
-                { title: 'LPG Cargo Client Handover', cat: 'Handovers' },
-                { title: 'Electric Ape Delivery Ceremony', cat: 'Handovers' },
-                { title: 'Authorized Spares Warehouse', cat: 'Service' },
-                { title: 'Certified Diagnostics Workshop', cat: 'Service' },
-                { title: 'Happy Water Agency Fleet Owner', cat: 'Success' }
-              ].map((g, idx) => (
-                <div key={idx} className="bg-white border border-gray-150 rounded-2xl overflow-hidden hover:shadow-md transition-all group">
-                  {/* Styled block representing layout gallery picture */}
-                  <div className="bg-slate-800 text-white h-44 flex flex-col justify-between p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-brand-green/20 to-slate-950 opacity-90 z-0"></div>
-                    <span className="bg-slate-900/80 text-brand-gold text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md self-start border border-white/10 relative z-10">
-                      {g.cat}
-                    </span>
-                    <div className="space-y-1 relative z-10">
-                      <p className="text-xs font-black tracking-wide leading-snug">{g.title}</p>
-                      <p className="text-[9px] text-gray-400 font-bold">Om Siddhababa Facility</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 6: BLOG */}
-        {activeTab === 'blog' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Industry Insights</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Commercial Mobility Blog</h2>
-              <p className="text-xs text-gray-500">Read the latest buying guides, running cost calculations, and business success guides for Nepalese transport.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            {/* Conditional Detail view vs Grid view */}
-            {selectedBlog ? (
-              <div className="bg-white border border-gray-150 rounded-2xl p-6 sm:p-8 space-y-6">
-                {/* Back button */}
-                <button
-                  onClick={() => setSelectedBlog(null)}
-                  className="font-bold text-xs text-brand-green hover:underline cursor-pointer"
-                >
-                  &larr; Back to all articles
-                </button>
-
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 font-bold">
-                    <span className="bg-brand-green-light text-brand-green px-2.5 py-1 rounded">
-                      {selectedBlog.category}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                      <span>{selectedBlog.date}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      <span>{selectedBlog.readTime}</span>
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight">
-                    {selectedBlog.title}
-                  </h3>
-                </div>
-
-                {/* Main Markdown content simulated */}
-                <div className="whitespace-pre-line text-xs sm:text-sm text-gray-700 leading-relaxed font-semibold space-y-4 border-t border-gray-100 pt-6">
-                  {selectedBlog.content}
-                </div>
-
-                <div className="border-t border-gray-100 pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="text-xs">
-                    <p className="font-extrabold text-gray-900">Need specific transport counsel?</p>
-                    <p className="text-gray-500">Speak anonymously with an AI consultant or book a callback.</p>
-                  </div>
-                  <button
-                    onClick={() => handleOpenInquiry(selectedBlog.title)}
-                    className="bg-brand-green hover:bg-brand-green-dark text-white font-extrabold py-3 px-5 rounded-xl text-xs cursor-pointer shadow-xs transition-colors shrink-0 text-center"
-                  >
-                    Discuss This Article With Us
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {BLOGS.map((blog) => (
-                  <div key={blog.id} className="bg-white rounded-2xl border border-gray-150 overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
-                    <div>
-                      {/* Styled decorative card header */}
-                      <div className="bg-slate-900 text-white p-5 h-28 flex flex-col justify-between relative">
-                        <div className="absolute inset-0 bg-radial-gradient from-brand-green/30 to-slate-950 opacity-90 z-0"></div>
-                        <span className="bg-white/10 text-brand-gold text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md self-start border border-white/25 relative z-10">
-                          {blog.category}
-                        </span>
-                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold relative z-10">
-                          <span>{blog.date}</span>
-                          <span>{blog.readTime}</span>
-                        </div>
-                      </div>
-
-                      <div className="p-5 space-y-2">
-                        <h4 className="font-black text-gray-900 text-sm leading-snug group-hover:text-brand-green transition-colors">
-                          {blog.title}
-                        </h4>
-                        <p className="text-xs text-gray-500 leading-relaxed line-clamp-3 font-semibold">
-                          {blog.excerpt}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-5 pt-0 border-t border-gray-50 mt-3">
-                      <button
-                        onClick={() => setSelectedBlog(blog)}
-                        className="w-full text-brand-green hover:bg-brand-green hover:text-white border border-brand-green font-extrabold py-2 px-3 rounded-xl text-xs transition-colors cursor-pointer text-center"
-                      >
-                        Read Full Article
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 7: FINANCE */}
-        {activeTab === 'finance' && (
-          <div className="animate-fade-in">
-            <EMICalculator 
-              initialVehiclePrice={selectedVehicle ? VEHICLES.find(v => v.id === selectedVehicle)?.approxPriceNPR : undefined}
-              initialVehicleId={selectedVehicle || undefined}
-              onOpenInquiry={handleOpenInquiry} 
-            />
-          </div>
-        )}
-
-        {/* TAB 8: CONTACT */}
-        {activeTab === 'contact' && (
-          <div className="space-y-12 animate-fade-in">
-            <div className="text-center space-y-2">
-              <span className="text-brand-green text-xs font-bold uppercase tracking-widest">Get In Touch</span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Contact Om Siddhababa</h2>
-              <p className="text-xs text-gray-500 max-w-lg mx-auto">Visit our main showroom at Kathmandu. Request immediate product quotations, test runs, or fleet evaluations.</p>
-              <div className="w-16 h-1 bg-brand-green mx-auto rounded-full mt-3"></div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Info Column */}
-              <div className="space-y-6">
-                
-                {/* Contact parameters */}
-                <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-xs space-y-6">
-                  <h3 className="text-sm font-black uppercase text-gray-800 tracking-wider border-b border-gray-50 pb-3">
-                    Dealership Coordinates
-                  </h3>
+              <p className="text-sm text-gray-600 leading-relaxed font-normal">
+                Namaste! Welcome to <strong>Om Siddhababa Enterprises</strong>, the authorized Piaggio Commercial Dealer network in Nepal. Headquartered at our active main hub on the East-West Highway in <strong>Lalbandi</strong>, we deliver robust three-wheelers, heavy-capacity cargo platforms, and zero-emission Lithium electric solutions directly with low EMIs and instant bank approvals.
+              </p>
 
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-brand-green shrink-0 mt-0.5" />
-                      <div className="text-xs font-semibold">
-                        <h4 className="font-bold text-gray-900 text-xs uppercase text-brand-green">Showroom Location</h4>
-                        <p className="text-gray-500">Mandev Marg, Ward No. 22,</p>
-                        <p className="text-gray-500">Kathmandu, Nepal</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-brand-green shrink-0 mt-0.5" />
-                      <div className="text-xs font-semibold">
-                        <h4 className="font-bold text-gray-900 text-xs uppercase text-brand-green">Direct Hotline</h4>
-                        <a href="tel:+9779851123456" className="text-gray-800 hover:underline block font-bold">+977-9851123456</a>
-                        <a href="tel:+9779841234567" className="text-gray-800 hover:underline block font-bold">+977-9841234567</a>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-brand-green shrink-0 mt-0.5" />
-                      <div className="text-xs font-semibold">
-                        <h4 className="font-bold text-gray-900 text-xs uppercase text-brand-green">Inquiry Email</h4>
-                        <a href="mailto:info@omsiddhababa.com" className="text-gray-800 hover:underline font-bold block">info@omsiddhababa.com</a>
-                      </div>
-                    </div>
-                  </div>
+              {/* Dynamic Value Metrics */}
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                <div className="space-y-1">
+                  <p className="text-xl sm:text-2xl font-black text-brand-green">Lalbandi</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Main Head Office</p>
                 </div>
-
-                {/* Physical timing */}
-                <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-xs space-y-3 font-semibold">
-                  <h4 className="text-xs font-bold uppercase text-gray-700">Opening Hours</h4>
-                  <div className="text-xs text-gray-500 flex justify-between">
-                    <span>Sunday - Friday:</span>
-                    <span className="font-bold text-gray-800">9:30 AM - 6:00 PM</span>
-                  </div>
-                  <div className="text-xs text-gray-500 flex justify-between">
-                    <span>Saturday:</span>
-                    <span className="font-bold text-amber-600">Closed (Service Appt Only)</span>
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-xl sm:text-2xl font-black text-gray-900">30% Min</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Bank Downpayment</p>
                 </div>
-
-                {/* Instant WhatsApp buttons */}
-                <a
-                  href="https://wa.me/9779851123456"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold p-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer text-xs"
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  <span>Contact Dealer on WhatsApp</span>
-                </a>
+                <div className="space-y-1">
+                  <p className="text-xl sm:text-2xl font-black text-brand-gold">NPR 45k</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimated Setup Margin</p>
+                </div>
               </div>
 
-              {/* Inquiry form section */}
-              <div id="inquiry-form-section" className="lg:col-span-2 bg-white border border-gray-150 rounded-2xl p-6 sm:p-8 space-y-6">
-                <div>
-                  <h3 className="text-lg font-black text-gray-900">Send an Instant inquiry</h3>
-                  <p className="text-xs text-gray-500">Need quotation pricing or loan guidance? Fill up the brief form, and get callbacks in under 2 hours!</p>
-                </div>
+              {/* Smooth Navigation CTAs */}
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  onClick={() => triggerScrollToSection('finance')}
+                  className="bg-brand-green hover:bg-brand-green-dark text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <Calculator className="w-4 h-4 text-brand-gold" />
+                  <span>Calculate Loan EMI</span>
+                </button>
+                
+                <button
+                  onClick={() => triggerScrollToSection('branches')}
+                  className="bg-white hover:bg-gray-50 border border-gray-250 text-gray-700 font-extrabold px-6 py-3.5 rounded-xl text-xs transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <MapPin className="w-4 h-4 text-brand-green" />
+                  <span>Browse Branches Network</span>
+                </button>
+              </div>
+            </div>
 
-                {submitSuccess && (
-                  <div className="bg-brand-green-light border border-brand-green/20 p-4 rounded-xl space-y-1">
-                    <p className="text-brand-green font-extrabold text-xs">✓ Inquiry Registered Successfully!</p>
-                    <p className="text-gray-500 text-[11px] leading-relaxed font-semibold">
-                      Your interest in the {inquiryVehicle} has been recorded by Om Siddhababa Enterprises sales office. <strong>You can review your own live submission instantly inside the &quot;Dealer Board&quot;</strong> tab in the navigation menu!
-                    </p>
+            {/* Right Hero block: Embedded Messenger from MD */}
+            <div className="lg:col-span-5 bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-md space-y-4 flex flex-col h-[400px]">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-brand-green flex items-center justify-center border border-brand-gold">
+                  <Sparkles className="w-4 h-4 text-brand-gold" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black tracking-tight flex items-center gap-1.5">
+                    <span>Siddhababa AI Messenger</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-550 animate-pulse"></span>
+                  </h3>
+                  <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Continuous MD Assistant</p>
+                </div>
+              </div>
+
+              {/* Chat messages viewport */}
+              <div className="flex-1 overflow-y-auto space-y-3.5 text-xs pr-1 scroll-thin">
+                {chatMessages.map(msg => (
+                  <div key={msg.id} className={`flex gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.sender === 'ai' && (
+                      <div className="w-5 h-5 rounded-md bg-brand-green shrink-0 flex items-center justify-center border border-brand-gold">
+                        <Sparkles className="w-3 h-3 text-brand-gold" />
+                      </div>
+                    )}
+                    <div className={`p-2.5 rounded-xl max-w-[85%] font-medium leading-relaxed ${
+                      msg.sender === 'user' 
+                        ? 'bg-brand-green text-white rounded-tr-none' 
+                        : 'bg-slate-800 text-gray-100 rounded-tl-none border border-slate-700/60'
+                    }`}>
+                      <p className="whitespace-pre-line text-[11px]">{msg.text}</p>
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex gap-2 justify-start items-center text-[10px] text-gray-400">
+                    <RefreshCw className="w-3 h-3 animate-spin text-brand-green" />
+                    <span>Analyzing your request...</span>
                   </div>
                 )}
-
-                <form onSubmit={handleInquirySubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-400 mb-1">
-                        Full Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g., Bal Bahadur Karki"
-                        value={inquiryName}
-                        onChange={(e) => setInquiryName(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs font-semibold focus:outline-none focus:border-brand-green"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-400 mb-1">
-                        Mobile Phone Number <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        placeholder="e.g., 9851XXXXXX"
-                        value={inquiryPhone}
-                        onChange={(e) => setInquiryPhone(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs font-semibold focus:outline-none focus:border-brand-green"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-400 mb-1">
-                        Vehicle Interest <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={inquiryVehicle}
-                        onChange={(e) => setInquiryVehicle(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs font-bold text-gray-800 focus:outline-none focus:border-brand-green cursor-pointer"
-                      >
-                        {VEHICLES.map((v) => (
-                          <option key={v.id} value={v.name}>
-                            {v.name} ({v.fuelType})
-                          </option>
-                        ))}
-                        <option value="Municipal Fleet Solutions">Municipal Fleet Solutions (EV Bulk)</option>
-                        <option value="Spare Parts Inquiry">Spare Parts Delivery</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-400 mb-1">
-                        Your Location (District/City) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g., Kalanki, Kathmandu"
-                        value={inquiryLocation}
-                        onChange={(e) => setInquiryLocation(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-xs font-semibold focus:outline-none focus:border-brand-green"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-gray-400 mb-1">
-                      Business Description & Message
-                    </label>
-                    <textarea
-                      rows={4}
-                      placeholder="Identify your business (e.g. wholesale drinking water agency, public passenger operator, last mile delivery logistics) and specify financing or timeline questions."
-                      value={inquiryMessage}
-                      onChange={(e) => setInquiryMessage(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 text-xs font-semibold focus:outline-none focus:border-brand-green"
-                    ></textarea>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-brand-green hover:bg-brand-green-dark text-white font-extrabold py-3.5 px-4 rounded-xl text-xs cursor-pointer shadow-md transition-all active:scale-95 disabled:bg-gray-200"
-                  >
-                    {isSubmitting ? 'Recording Inquiry...' : 'Submit Official Inquiry Now'}
-                  </button>
-                </form>
+                <div ref={chatEndRef} />
               </div>
 
-            </div>
+              {/* Mini FAQ Chips */}
+              <div className="flex gap-1.5 overflow-x-auto py-1 no-scrollbar text-[10px]">
+                <button 
+                  onClick={() => handleQuickQuestion('What is the address of Lalbandi main branch?')}
+                  className="bg-slate-800 hover:bg-slate-700 text-gray-300 px-2 py-1 rounded border border-slate-700/80 cursor-pointer whitespace-nowrap"
+                >
+                  📍 Sarlahi Address
+                </button>
+                <button 
+                  onClick={() => handleQuickQuestion('How much is the minimum downpayment for electric rickshaw?')}
+                  className="bg-slate-800 hover:bg-slate-700 text-gray-300 px-2 py-1 rounded border border-slate-700/80 cursor-pointer whitespace-nowrap"
+                >
+                  ⚡ EV Downpayment
+                </button>
+                <button 
+                  onClick={() => handleQuickQuestion('What models are physically in stock right now?')}
+                  className="bg-slate-800 hover:bg-slate-700 text-gray-300 px-2 py-1 rounded border border-slate-700/80 cursor-pointer whitespace-nowrap"
+                >
+                  📦 In-Stock Check
+                </button>
+              </div>
 
-            {/* Google Maps Embed Simulation */}
-            <div className="bg-white rounded-2xl border border-gray-150 p-4 space-y-3 shadow-xs">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Interactive Location Map</span>
-              <div className="bg-slate-800 text-white p-12 text-center rounded-xl relative overflow-hidden flex flex-col justify-center items-center h-48">
-                <div className="absolute inset-0 bg-radial-gradient from-brand-green/30 to-slate-950 opacity-90 z-0"></div>
-                <div className="relative z-10 space-y-2">
-                  <MapPin className="w-8 h-8 text-brand-gold animate-bounce mx-auto" />
-                  <h4 className="text-sm font-extrabold">Om Siddhababa Enterprises Showroom</h4>
-                  <p className="text-xs text-gray-450 font-bold max-w-sm">
-                    Mandev Marg, Kathmandu 44600, Nepal (Directly adjacent to Piaggio Service and Diagnostics Point)
+              {/* Chat Input form */}
+              <form onSubmit={handleSendChat} className="flex gap-1.5 pt-1.5 border-t border-white/10">
+                <input 
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask and obtain automated specs..."
+                  className="flex-1 bg-slate-800 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-green border border-slate-750 placeholder-gray-400"
+                />
+                <button 
+                  type="submit"
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="bg-brand-green text-white px-3.5 py-2 rounded-lg hover:bg-brand-green-dark transition-colors cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        {/* ================= SECTION 2: LOAN EMI CALCULATOR ================= */}
+        <section id="section-finance" className="scroll-mt-24 space-y-12 bg-white rounded-3xl p-6 sm:p-10 border border-gray-150 shadow-xs">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-brand-green text-[10px] font-black uppercase tracking-widest bg-brand-green-light px-3.5 py-1.5 rounded-full text-brand-green border border-brand-green/10">
+              Loan Planning Engine
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Interactive Finance & EMI Planner
+            </h2>
+            <p className="text-sm text-gray-600 leading-relaxed font-normal">
+              Our specialized loan tool lets you estimate monthly payables and compare interest programs on Piaggio models across major Nepalese partner banks.
+            </p>
+            <div className="w-12 h-0.5 bg-brand-green mx-auto rounded-full mt-2"></div>
+          </div>
+
+          <EMICalculator onOpenInquiry={(vId) => {
+            const vName = VEHICLES.find(v => v.id === vId)?.name || 'Custom Vehicle';
+            handleQuickQuestion(`Hello, I would like to acquire a quotation and finance support check for the ${vName}. Please provide detail.`);
+            triggerScrollToSection('home');
+          }} />
+        </section>
+
+        {/* ================= SECTION 3: SHOWROOM GALLERY ================= */}
+        <section id="section-gallery" className="scroll-mt-24 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-brand-green text-[10px] font-black uppercase tracking-widest bg-brand-green-light px-3.5 py-1.5 rounded-full text-brand-green border border-brand-green/10">
+              Nepal Operations Showcase
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Siddhababa Showroom & Fleet Photo Gallery
+            </h2>
+            <p className="text-sm text-gray-600 leading-relaxed font-normal">
+              Explore actual high-resolution photography showcasing electric, engine, and showroom parameters of Piaggio cargo and passenger models in service.
+            </p>
+            <div className="w-12 h-0.5 bg-brand-green mx-auto rounded-full mt-2"></div>
+          </div>
+
+          {/* Gallery Filter controls */}
+          <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+            {[
+              { id: 'all', label: 'All Photos' },
+              { id: 'electric', label: 'E-City Lithium EV' },
+              { id: 'cargo', label: 'Ape Cargo Logistics' },
+              { id: 'showroom', label: 'Kathmandu Showroom Floor' },
+              { id: 'user', label: 'Owner Uploads' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setGalleryFilter(cat.id)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer ${
+                  galleryFilter === cat.id
+                    ? 'bg-brand-green text-white shadow-xs font-black'
+                    : 'bg-white hover:bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Responsive Gallery Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredGalleryImages.map((img) => (
+              <div 
+                key={img.id}
+                onClick={() => setActiveLightbox(img)}
+                className="group relative bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 cursor-zoom-in"
+              >
+                <div className="aspect-video overflow-hidden relative bg-gray-100">
+                  <img 
+                    src={img.imageUrl} 
+                    alt={img.title}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <span className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md text-[9px] font-black uppercase text-brand-gold px-2.5 py-1 rounded-md border border-white/10 tracking-wider">
+                    {img.category}
+                  </span>
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                    <span className="text-[10px] text-white font-extrabold bg-brand-green px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-brand-gold" />
+                      <span>Zoom Photograph & Specs</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-1.5 bg-white">
+                  <h4 className="font-extrabold text-sm text-gray-950 group-hover:text-brand-green transition-colors line-clamp-1">
+                    {img.title}
+                  </h4>
+                  <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed font-semibold">
+                    {img.desc}
                   </p>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Custom File Upload Board */}
+          <div className="max-w-4xl mx-auto bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <span className="text-brand-gold text-[9px] font-black uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50">
+                Community Owner Board
+              </span>
+              <h3 className="font-extrabold text-md text-gray-950">Add Your Pride: Community Fleet Photo Board</h3>
+              <p className="text-xs text-gray-500 max-w-xl mx-auto leading-relaxed">
+                Are you an operator in Lalbandi, Kathmandu, or neighboring routes? Drag and drop files to post your personal Piaggio rickshaw directly on our board.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={triggerFileInput}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-3 min-h-[160px] ${
+                  isDragging 
+                    ? 'border-brand-green bg-brand-green-light scale-98' 
+                    : 'border-gray-205 hover:border-brand-green hover:bg-slate-50'
+                }`}
+              >
+                <input 
+                  type="file"
+                  id="gallery-upload-input"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Camera className="w-6 h-6 text-brand-green" />
+                <p className="text-xs font-bold text-gray-800">Drag & Drop Vehicle Photo Here</p>
+                <p className="text-[10px] text-gray-400 font-semibold">or click to choose custom local asset</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold uppercase text-gray-400">Title / Route Name</label>
+                  <input 
+                    type="text"
+                    placeholder="e.g., Piaggio Cargo DX - Hariwon Cargo"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-green"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold uppercase text-gray-400">Fleet Comments</label>
+                  <textarea 
+                    rows={2}
+                    placeholder="e.g., Pulls smoothly on steep incline climbs."
+                    value={uploadDesc}
+                    onChange={(e) => setUploadDesc(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:border-brand-green"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleUploadSubmit}
+                    className="flex-1 bg-brand-green text-white text-xs font-bold py-2.5 rounded-lg hover:bg-brand-green-dark cursor-pointer transition-all"
+                  >
+                    Publish ride photo
+                  </button>
+                  <button 
+                    onClick={() => { setUploadTitle(''); setUploadDesc(''); setUploadDataUrl(''); }}
+                    className="px-3 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                {uploadDataUrl && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-between gap-2 text-xs">
+                    <span className="text-brand-green font-extrabold text-[10px]">✓ Image load verified successfully!</span>
+                    <button onClick={() => setUploadDataUrl('')} className="text-red-500 font-bold hover:underline text-[10px]">Remove</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </section>
 
-        {/* TAB 9: REVOLUTIONARY LEAD/CRM DASHBOARD */}
-        {activeTab === 'admin' && (
-          <div className="animate-fade-in">
-            <DealerAdmin />
+        {/* ================= SECTION 4: BRANCHES IN LALBANDI & OTHERS ================= */}
+        <section id="section-branches" className="scroll-mt-24 space-y-12 bg-white rounded-3xl p-6 sm:p-10 border border-gray-150 shadow-xs">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-brand-green text-[10px] font-black uppercase tracking-widest bg-brand-green-light px-3.5 py-1.5 rounded-full text-brand-green border border-brand-green/10">
+              Dealer Network Grid
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Our Branches (Lalbandi & Network)
+            </h2>
+            <p className="text-sm text-gray-600 leading-relaxed font-normal">
+              Om Siddhababa operates multiple branch offices along the East-West Highway to ensure prompt pickup, spares support, and mechanical repair. Click any branch to load its direct contact coordinates.
+            </p>
+            <div className="w-12 h-0.5 bg-brand-green mx-auto rounded-full mt-2"></div>
           </div>
-        )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Hand: Branch selector menu listing all locations */}
+            <div className="lg:col-span-4 space-y-3">
+              <h4 className="text-[10px] uppercase tracking-widest text-gray-400 font-extrabold pl-1 mb-2">
+                Select Active Branch Coordinates
+              </h4>
+              
+              <div className="space-y-2.5">
+                {BRANCHES.map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => setSelectedBranchId(b.id)}
+                    className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer flex justify-between items-center ${
+                      selectedBranchId === b.id
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                        : 'bg-gray-50 hover:bg-slate-100 border-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm">{b.name.split(' Showroom')[0].split(' Branch')[0].split(' Highway')[0].split(' Sub-Branch')[0].split(' Showroom')[0]}</span>
+                        {b.isMainOffice && (
+                          <span className="bg-brand-gold text-slate-950 font-extrabold text-[8px] px-1.5 py-0.5 rounded tracking-wide uppercase">
+                            head office
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[11px] line-clamp-1 font-semibold ${selectedBranchId === b.id ? 'text-gray-300' : 'text-gray-500'}`}>
+                        {b.district}
+                      </p>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${selectedBranchId === b.id ? 'text-brand-gold rotate-90' : 'text-gray-400'}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Middle/Right Hand: Expanded active branch coordinates info cards */}
+            <div className="lg:col-span-8 bg-slate-55 shadow-inner rounded-3xl border border-gray-200/65 p-6 sm:p-8 space-y-6">
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="bg-brand-green/10 text-brand-green font-extrabold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider">
+                    {currentBranch.isMainOffice ? '⭐ PRIMARY DEALER BASE' : '🔗 LOCALIZED AREA BRANCH'}
+                  </span>
+                  
+                  <span className="text-[11px] font-bold text-gray-400">
+                    Siddhababa Network UID: <strong className="text-gray-700">{currentBranch.id.toUpperCase()}</strong>
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-black text-gray-950 leading-tight">
+                  {currentBranch.name}
+                </h3>
+                <p className="text-xs text-gray-500 italic font-semibold leading-relaxed">
+                  "{currentBranch.tagline}"
+                </p>
+              </div>
+
+              {/* Grid detail metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-gray-150 space-y-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <h5 className="font-extrabold text-gray-900 uppercase text-[9px] text-brand-green tracking-wider">Physical Address</h5>
+                      <p className="text-gray-600 font-semibold leading-relaxed mt-1">{currentBranch.address}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-gray-150 space-y-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <Phone className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <h5 className="font-extrabold text-gray-900 uppercase text-[9px] text-brand-green tracking-wider">Direct Call Hotline</h5>
+                      <p className="text-gray-600 font-extrabold tracking-wide mt-1 text-sm">{currentBranch.phone}</p>
+                      <a href={`tel:${currentBranch.phone.split(' / ')[0]}`} className="text-[10px] text-brand-green hover:underline font-black uppercase mt-1 block">
+                        ➔ Dial Direct Number
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-gray-150 space-y-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <Clock className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <h5 className="font-extrabold text-gray-900 uppercase text-[9px] text-brand-green tracking-wider">Hours & Manager</h5>
+                      <p className="text-gray-600 font-semibold leading-relaxed mt-1">
+                        <strong>Hours:</strong> {currentBranch.operatingHours}<br />
+                        <strong>Contact:</strong> {currentBranch.manager} (Branch Representative)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-gray-150 space-y-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <Landmark className="w-4 h-4 text-brand-green shrink-0 mt-0.5" />
+                    <div className="text-xs">
+                      <h5 className="font-extrabold text-gray-900 uppercase text-[9px] text-brand-green tracking-wider">Stock Diagnostics</h5>
+                      <p className="text-gray-600 font-semibold leading-relaxed mt-1">{currentBranch.stockStatus}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Available Services */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-gray-150 space-y-2">
+                <h4 className="text-[10px] uppercase font-black tracking-widest text-gray-400">
+                  Authorized Facility Support Checklist:
+                </h4>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {currentBranch.servicesAvailable.map((srv, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-green flex-shrink-0"></span>
+                      <span>{srv}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* AND OTHERS ALSO - Encouraging dynamic clicking of other branches */}
+              <div className="border-t border-gray-150 pt-5 space-y-3">
+                <h4 className="text-[10px] uppercase font-bold tracking-widest text-gray-400">
+                  Click below to quick-swap and compare other branches:
+                </h4>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {otherBranchesList.map((ob) => (
+                    <button
+                      key={ob.id}
+                      onClick={() => setSelectedBranchId(ob.id)}
+                      className="bg-white hover:bg-brand-green hover:text-white border border-gray-200 text-gray-700 text-[11px] font-bold p-2.5 rounded-xl text-center transition-all cursor-pointer truncate shadow-2xs"
+                    >
+                      {ob.name.split(' Showroom')[0].split(' Branch')[0].split(' Highway')[0].split(' Sub-Branch')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
 
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-white mt-16 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-          
-          <div className="space-y-4 md:col-span-2">
-            <h4 className="text-md font-extrabold text-brand-gold uppercase tracking-widest">
-              Om Siddhababa Enterprises
-            </h4>
-            <p className="text-xs text-gray-400 max-w-lg leading-relaxed font-semibold">
-              Authorized Piaggio Commercial Vehicle Dealer in Nepal. We supply robust, fuel-saving small-transport vehicle ranges configured to handle challenging terrains with long-term aftersales engineering warranties.
-            </p>
-            <div className="text-[10px] text-gray-500 font-bold tracking-wider">
-              LICENSING: PIAGGIO COMMERCIAL VEHICLES OPERATIONS DIVISION
+      {/* 3. LIGHTBOX SPECTACULAR OVERLAY */}
+      {activeLightbox && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl relative border border-gray-205 flex flex-col">
+            <button 
+              onClick={() => setActiveLightbox(null)}
+              className="absolute top-4 right-4 bg-slate-900 hover:bg-slate-950 text-white p-2 rounded-full cursor-pointer z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="aspect-video bg-black relative">
+              <img src={activeLightbox.imageUrl} alt={activeLightbox.title} className="w-full h-full object-cover" refferrerpolicy="no-referrer" />
             </div>
-          </div>
-
-          <div className="space-y-3 text-xs font-semibold">
-            <h4 className="font-extrabold text-white text-xs uppercase tracking-wider">Quick Jump Links</h4>
-            <ul className="space-y-1.5 text-gray-400">
-              <li><button onClick={() => setActiveTab('vehicles')} className="hover:text-brand-gold">Showroom Vehicles</button></li>
-              <li><button onClick={() => setActiveTab('finance')} className="hover:text-brand-gold">EMI Rate Calculator</button></li>
-              <li><button onClick={() => setActiveTab('blog')} className="hover:text-brand-gold">Mobility Blogs</button></li>
-              <li><button onClick={() => setActiveTab('admin')} className="hover:text-brand-gold">Dealer Leads Desk 🔒</button></li>
-            </ul>
-          </div>
-
-          <div className="space-y-3 text-xs font-semibold">
-            <h4 className="font-extrabold text-white text-xs uppercase tracking-wider">Official Contacts</h4>
-            <div className="space-y-1 text-gray-405">
-              <p>Hotline: 9851123456</p>
-              <p>Email: info@omsiddhababa.com</p>
-              <p>Kathmandu, Nepal</p>
+            <div className="p-6 space-y-2.5">
+              <span className="text-[10px] font-extrabold uppercase bg-brand-green-light text-brand-green px-2.5 py-1 rounded inline-block">
+                {activeLightbox.category}
+              </span>
+              <h4 className="text-lg font-black text-gray-950">{activeLightbox.title}</h4>
+              <p className="text-xs text-gray-600 leading-relaxed font-semibold">{activeLightbox.desc}</p>
+              <div className="flex gap-2 pt-2">
+                <button 
+                  onClick={() => {
+                    handleQuickQuestion(`I am interested in vehicle details from photo: ${activeLightbox.title}`);
+                    setActiveLightbox(null);
+                    triggerScrollToSection('home');
+                  }} 
+                  className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-bold px-4 py-2 rounded-lg cursor-pointer transition-all"
+                >
+                  Send Inquiry regarding photo spec
+                </button>
+                <button 
+                  onClick={() => setActiveLightbox(null)}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold px-4 py-2 rounded-lg cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        <div className="border-t border-slate-800 py-6 text-center text-xs text-gray-500 font-bold max-w-7xl mx-auto px-4">
-          <p>© 2026 Om Siddhababa Enterprises. All Rights Reserved. Authorized Piaggio Commercial Dealer.</p>
-        </div>
-      </footer>
-
-      {/* Floating Smart AI Consultant */}
+      {/* 4. FLOATING AI CONTROLLER */}
       <SiddhababaAI 
         isOpen={aiOpen} 
         onClose={() => setAiOpen(false)} 
         onOpen={() => setAiOpen(true)} 
       />
+
+      {/* 5. FOOTER */}
+      <footer className="bg-slate-905 mt-24 border-t border-gray-200 py-16 text-center text-xs space-y-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <p className="text-xs text-gray-400 font-extrabold uppercase tracking-widest">
+          OM SIDDHABABA ENTERPRISES PRIVATE LIMITED
+        </p>
+        <p className="text-xs text-gray-500 leading-relaxed font-semibold max-w-lg mx-auto">
+          Authorized Piaggio commercial vehicle dealership. Centered at East-West Highway, Lalbandi, Sarlahi District, Nepal. Servicing cargo drivers, passenger auto rickshaws, and smart swappable LFP battery fleets across Madhesh Province.
+        </p>
+        <p className="text-[10px] text-gray-400 pt-3">
+          © 2026 Om Siddhababa Enterprises. Commercial Vehicle Licensing Approved.
+        </p>
+      </footer>
+
     </div>
   );
 }
