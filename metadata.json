@@ -1,0 +1,6 @@
+{
+  "name": "Om Siddhababa Enterprises",
+  "description": "Authorized Piaggio Commercial Vehicle Dealer in Nepal. Explore passenger, cargo, and electric three-wheeler vehicles with dynamic finance rates, EMI calculators, and lead management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
