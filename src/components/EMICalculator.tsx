@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { PARTNER_BANKS, VEHICLES } from '../data';
+import { Vehicle, PartnerBank } from '../types';
 import { Calculator, ShieldCheck, FileText, CheckCircle, Percent, ArrowRight, Zap } from 'lucide-react';
 
 interface EMICalculatorProps {
   initialVehiclePrice?: number;
   initialVehicleId?: string;
   onOpenInquiry: (vehicleId: string) => void;
+  vehiclesList?: Vehicle[];
+  partnerBanksList?: PartnerBank[];
 }
 
-export default function EMICalculator({ initialVehiclePrice, initialVehicleId, onOpenInquiry }: EMICalculatorProps) {
+export default function EMICalculator({ 
+  initialVehiclePrice, 
+  initialVehicleId, 
+  onOpenInquiry,
+  vehiclesList,
+  partnerBanksList
+}: EMICalculatorProps) {
+  const vList = vehiclesList && vehiclesList.length > 0 ? vehiclesList : VEHICLES;
+  const bList = partnerBanksList && partnerBanksList.length > 0 ? partnerBanksList : PARTNER_BANKS;
+
   // Let user pick a vehicle or choose custom price
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(initialVehicleId || VEHICLES[0].id);
-  const [vehiclePrice, setVehiclePrice] = useState<number>(initialVehiclePrice || VEHICLES[0].approxPriceNPR);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>(initialVehicleId || vList[0]?.id || 'custom');
+  const [vehiclePrice, setVehiclePrice] = useState<number>(initialVehiclePrice || vList[0]?.approxPriceNPR || 400000);
   
   // Financial Sliders
   const [downpaymentPct, setDownpaymentPct] = useState<number>(30); // Min 30% default
@@ -20,11 +32,11 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
 
   // Sync vehicle price when selected vehicle changes
   useEffect(() => {
-    const veh = VEHICLES.find(v => v.id === selectedVehicleId);
+    const veh = vList.find(v => v.id === selectedVehicleId);
     if (veh) {
       setVehiclePrice(veh.approxPriceNPR);
     }
-  }, [selectedVehicleId]);
+  }, [selectedVehicleId, vList]);
 
   // Read initial properties on mount
   useEffect(() => {
@@ -58,7 +70,7 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
   const totalInterestPayable = totalAmountPayable - loanAmount;
 
   // EV Cost vs Petrol Payback Calculator
-  const currentVehicle = VEHICLES.find(v => v.id === selectedVehicleId);
+  const currentVehicle = vList.find(v => v.id === selectedVehicleId);
   const isEV = currentVehicle?.category === 'electric';
 
   // Helper formatter for Nepalese currency style
@@ -110,11 +122,12 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
                   onChange={(e) => setSelectedVehicleId(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-800 focus:outline-none focus:border-brand-green"
                 >
-                  {VEHICLES.map((v) => (
+                  {vList.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.name} ({v.fuelType})
                     </option>
                   ))}
+                  <option value="custom-input">Custom Setup / Other Spec</option>
                 </select>
               </div>
 
@@ -159,7 +172,7 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
                   className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-brand-green"
                 />
                 <p className="text-[10px] text-amber-600 font-medium">
-                  *Nepalese banks require a minimum 30% deposit for commercial commercial vehicles.
+                  *Nepalese banks require a minimum 30% deposit for commercial vehicles.
                 </p>
               </div>
 
@@ -215,7 +228,7 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
                 <span>Green Financing Payback Benefits</span>
               </h4>
               <p className="text-xs text-gray-600 leading-relaxed">
-                By purchasing an electric Piaggio under our <strong>EV Financing Scheme</strong>, your business saves approximately <strong>NPR 500+ every single single day</strong> in fuel and filter maintenance.
+                By purchasing an electric Piaggio under our <strong>EV Financing Scheme</strong>, your business saves approximately <strong>NPR 500+ every single day</strong> in fuel and filter maintenance.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="bg-white p-3 rounded-xl border border-brand-green/10 text-center">
@@ -283,6 +296,105 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
             </button>
           </div>
 
+          {/* Selected Vehicle Showcase & Spotlight Card */}
+          {currentVehicle && (
+            <div className="bg-white border border-gray-150 rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all duration-300 space-y-4">
+              <div className="aspect-video relative bg-slate-100 overflow-hidden group">
+                <img 
+                  src={
+                    currentVehicle.imageUrl || 
+                    (currentVehicle.image && (currentVehicle.image.startsWith('http') || currentVehicle.image.startsWith('/src') || currentVehicle.image.startsWith('data:'))) 
+                      ? (currentVehicle.imageUrl || currentVehicle.image) 
+                      : (
+                        currentVehicle.image === 'passenger-auto' ? 'https://images.unsplash.com/photo-1561124638-c521c35ca02a?auto=format&fit=crop&q=80&w=800' :
+                        currentVehicle.image === 'electric-passenger' ? 'https://images.unsplash.com/photo-1558442074-3c19857bc1f3?auto=format&fit=crop&q=80&w=800' :
+                        currentVehicle.image === 'cargo-diesel' ? 'https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?auto=format&fit=crop&q=80&w=800' :
+                        currentVehicle.image === 'electric-cargo' ? 'https://images.unsplash.com/photo-1596898516084-5f1188d5e985?auto=format&fit=crop&q=80&w=800' :
+                        `https://picsum.photos/seed/${currentVehicle.id}/800/600`
+                      )
+                  }
+                  alt={currentVehicle.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    // Fallback for broken custom urls
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${currentVehicle.id}/800/600`;
+                  }}
+                />
+                
+                <div className="absolute top-3 left-3 bg-slate-900/85 backdrop-blur-md text-[9px] font-black uppercase text-brand-gold px-2.5 py-1 rounded-md border border-white/10 tracking-wider">
+                  {currentVehicle.category}
+                </div>
+                
+                <div className="absolute bottom-3 right-3 bg-brand-green text-white text-[9px] font-black uppercase px-2.5 py-1 rounded-md shadow-xs">
+                  {currentVehicle.fuelType}
+                </div>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-sm text-gray-900 group-hover:text-brand-green transition-colors">
+                    {currentVehicle.name}
+                  </h4>
+                  <p className="text-[11px] text-gray-550 leading-relaxed font-semibold">
+                    {currentVehicle.tagline}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2 text-[10px] border-t border-gray-100">
+                  {currentVehicle.specs?.engine && (
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                      <p className="text-gray-400 font-bold uppercase text-[8px]">Engine Power</p>
+                      <p className="text-gray-700 font-extrabold truncate">{currentVehicle.specs.engine}</p>
+                    </div>
+                  )}
+                  {currentVehicle.specs?.batteryCapacity && (
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                      <p className="text-gray-400 font-bold uppercase text-[8px]">Battery Pack</p>
+                      <p className="text-gray-700 font-extrabold truncate">{currentVehicle.specs.batteryCapacity}</p>
+                    </div>
+                  )}
+                  {currentVehicle.specs?.range && (
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                      <p className="text-gray-400 font-bold uppercase text-[8px]">Est. Range</p>
+                      <p className="text-gray-700 font-extrabold truncate">{currentVehicle.specs.range}</p>
+                    </div>
+                  )}
+                  {currentVehicle.specs?.payloadCapacity && (
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                      <p className="text-gray-400 font-bold uppercase text-[8px]">Max Payload</p>
+                      <p className="text-gray-700 font-extrabold truncate">{currentVehicle.specs.payloadCapacity}</p>
+                    </div>
+                  )}
+                  {currentVehicle.specs?.seatingCapacity && (
+                    <div className="bg-slate-50 p-2 rounded-lg">
+                      <p className="text-gray-400 font-bold uppercase text-[8px]">Seating Cap.</p>
+                      <p className="text-gray-700 font-extrabold truncate">{currentVehicle.specs.seatingCapacity}</p>
+                    </div>
+                  )}
+                  {currentVehicle?.priceRange && (
+                    <div className="bg-brand-green-light/40 col-span-2 p-2 rounded-lg text-center font-black text-brand-green tracking-wide">
+                      Showroom Price: {currentVehicle.priceRange}
+                    </div>
+                  )}
+                </div>
+
+                {currentVehicle.features && currentVehicle.features.length > 0 && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-[9px] font-black uppercase text-gray-400 mb-1.5 tracking-wider">Premium Custom Features</p>
+                    <div className="flex flex-wrap gap-1">
+                      {currentVehicle.features.slice(0, 3).map((feat, idx) => (
+                        <span key={idx} className="bg-slate-100 text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded">
+                          ✓ {feat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Quick Security Badge */}
           <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
             <ShieldCheck className="w-10 h-10 text-brand-green flex-shrink-0" />
@@ -304,14 +416,27 @@ export default function EMICalculator({ initialVehiclePrice, initialVehicleId, o
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {PARTNER_BANKS.map((bank, idx) => (
+          {bList.map((bank, idx) => (
             <div
               key={idx}
               className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-all text-center space-y-3"
             >
-              {/* Fake bank logo representation */}
-              <div className="w-12 h-12 bg-slate-100 text-slate-700 font-extrabold text-sm rounded-full flex items-center justify-center mx-auto border-2 border-brand-green">
-                {bank.logo}
+              {/* Partner bank logo image or stylized initials */}
+              <div className="w-12 h-12 bg-slate-100 text-slate-700 font-extrabold text-sm rounded-full flex items-center justify-center mx-auto border-2 border-brand-green overflow-hidden">
+                {bank.logoUrl ? (
+                  <img 
+                    src={bank.logoUrl} 
+                    alt={bank.name} 
+                    className="w-full h-full object-cover" 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      // fallback to text inside a newly created or styled layout
+                    }}
+                  />
+                ) : (
+                  bank.logo
+                )}
               </div>
               <div>
                 <h4 className="font-bold text-gray-800 text-sm leading-tight">{bank.name}</h4>

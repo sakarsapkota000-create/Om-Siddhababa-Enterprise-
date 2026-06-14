@@ -8,6 +8,7 @@ export interface Vehicle {
   category: 'passenger' | 'cargo' | 'electric';
   tagline: string;
   image: string;
+  imageUrl?: string; // Custom edited image URL
   fuelType: 'Electric' | 'Petrol' | 'Diesel' | 'LPG' | 'CNG';
   priceRange: string; // Price in Nepalese Rupees (NPR)
   approxPriceNPR: number; // For calculation
@@ -54,6 +55,7 @@ export interface BlogPost {
 export interface PartnerBank {
   name: string;
   logo: string; // CSS-based avatar or design
+  logoUrl?: string; // Optional custom logo image URL
   maxFinancing: string;
   interestRate: string;
 }
